@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	//"sync/atomic"
 )
 
 var Output = make(chan any)
