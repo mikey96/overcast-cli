@@ -4,27 +4,13 @@ import (
 	"bufio"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 )
 
-type ConfigT struct {
-	Url string
-	Key string
-}
-
-type SearchQuery struct {
-	Page  int    `json:"page"`
-	Query string `json:"query"`
-}
-
-type CountResp struct {
-	Count int `json:"count"`
-}
-
 var Config = ConfigT{
 	Url: "http://localhost:8000",
+	// this is overwritten by -key flag
 	Key: os.Getenv("OVERCAST_API_KEY"),
 }
 
@@ -36,7 +22,7 @@ func writer() {
 	for res := range Output {
 		err := json.NewEncoder(w).Encode(res)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	}
 }
@@ -45,7 +31,6 @@ func app() {
 	defer close(Output)
 
 	var initKey = func(key string) {
-		log.Println(key, Config.Key)
 		if key == "" && Config.Key == "" {
 			log.Fatalf("No API key provided\nYou can provide one by using the --key flag (priority)\nor OVERCAST_API_KEY environment variable\nGet or update your key here: https://search.overcast-security.app/profile")
 		}
@@ -66,6 +51,9 @@ func app() {
 	overviewCmd := flag.NewFlagSet("overview", flag.ExitOnError)
 	overviewKey := keyFlag(overviewCmd)
 
+	metadataCmd := flag.NewFlagSet("metadata", flag.ExitOnError)
+	metadataKey := keyFlag(metadataCmd)
+
 	switch os.Args[1] {
 	case "search":
 		searchCmd.Parse(os.Args[2:])
@@ -77,15 +65,22 @@ func app() {
 		if err != nil {
 			log.Println(err)
 		}
+	case "metadata":
+		metadataCmd.Parse(os.Args[2:])
+		initKey(*metadataKey)
+		err := Metadata(metadataCmd.Args()[0])
+		if err != nil {
+			log.Println(err)
+		}
 	case "overview":
 		overviewCmd.Parse(os.Args[2:])
 		initKey(*overviewKey)
-		err := AssetOverview(overviewCmd.Args()[0])
+		err := Overview(overviewCmd.Args()[0])
 		if err != nil {
 			log.Println(err)
 		}
 	default:
-		log.Fatalf("subcommands: search, overview")
+		log.Println("subcommands: search, overview")
 	}
 }
 
