@@ -61,14 +61,14 @@ func app() {
 		if *searchAll {
 			*searchPage = -1
 		}
-		err := Search(*searchPage, searchCmd.Args()[0])
+		err := Search(*searchPage, QueryStringArgs(searchCmd.Args()))
 		if err != nil {
 			log.Println(err)
 		}
 	case "metadata":
 		metadataCmd.Parse(os.Args[2:])
 		initKey(*metadataKey)
-		err := Metadata(metadataCmd.Args()[0])
+		err := Metadata(QueryStringArgs(metadataCmd.Args()))
 		if err != nil {
 			log.Println(err)
 		}
