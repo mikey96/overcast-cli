@@ -60,36 +60,23 @@ func ApiPost[T any](path string, data any, to T) (T, error) {
 	return res, err
 }
 
-func count(queryString string) (int, error) {
-	resp, err := ApiPost("/search/count", SearchReq{Query: queryString}, CountResp{})
-	return resp.Count, err
-}
-
-func AssetOverview(domain string) (any, error) {
-	var resp map[string]any
-	return ApiGet(fmt.Sprintf("/overview/asset?domain=%s", domain), resp)
-}
-
-func ServiceOverview(domain string) (any, error) {
-	var resp map[string]any
-	return ApiGet(fmt.Sprintf("/overview/service?domain=%s", domain), resp)
-}
-
-func RisksOverview(domain string) (any, error) {
-	var resp map[string]any
-	return ApiGet(fmt.Sprintf("/overview/risks?domain=%s", domain), resp)
-}
-
 func Overview(domain string) error {
-	var tmp = sync.Map{}
+	var respT map[string]any
 	var sources = map[string]func(string) (any, error){
-		"assets":   AssetOverview,
-		"services": ServiceOverview,
-		"risks":    RisksOverview,
+		"asset": func(domain string) (any, error) {
+			return ApiGet(fmt.Sprintf("/overview/asset?domain=%s", domain), respT)
+		},
+		"service": func(domain string) (any, error) {
+			return ApiGet(fmt.Sprintf("/overview/services?domain=%s", domain), respT)
+		},
+		"risk": func(domain string) (any, error) {
+			return ApiGet(fmt.Sprintf("/overview/risks?domain=%s", domain), respT)
+		},
 	}
 
 	// concurrently evaluate the above data
 	var wg sync.WaitGroup
+	var tmp = sync.Map{}
 	wg.Add(len(sources))
 	for k, v := range sources {
 		go func(key string, src func(string) (any, error)) {
@@ -104,7 +91,7 @@ func Overview(domain string) error {
 
 	// sync map to map[string]any
 	var resp = OverviewResp{}
-	tmp.Range(func(k any, v any)bool{
+	tmp.Range(func(k any, v any) bool {
 		resp[k.(string)] = v
 		return true
 	})
@@ -124,6 +111,11 @@ func Metadata(queryString string) error {
 }
 
 func Search(page int, queryString string) error {
+	var count = func(queryString string) (int, error) {
+		resp, err := ApiPost("/search/count", SearchReq{Query: queryString}, CountResp{})
+		return resp.Count, err
+	}
+
 	var searchPage = func(p int) error {
 		query := SearchReq{Page: p, Query: queryString}
 		resp, err := ApiPost("/search", query, any(1))
@@ -134,12 +126,12 @@ func Search(page int, queryString string) error {
 		return nil
 	}
 
-	count, err := count(queryString)
+	c, err := count(queryString)
 	if err != nil {
 		return err
 	}
 
-	pages := (count / 100) + 1
+	pages := (c / 100) + 1
 	if page >= 0 {
 		if page > pages {
 			return fmt.Errorf("Last page is %d", pages)
