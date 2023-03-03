@@ -5,27 +5,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"sync"
-	"os"
 )
 
-var url = "http://localhost:8000"
-var key = os.Getenv("OVERCAST_API_KEY")
-
 func endpoint(path string) string {
-	return fmt.Sprintf("%s%s", url, path)
+	return fmt.Sprintf("%s%s", Config.Url, path)
 }
 
 func authReq(method string, url string, contentType string, body io.Reader) (*http.Response, error) {
-log.Println(key)
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-type", contentType)
-	req.Header.Set("Authorization", fmt.Sprintf("Key %s", key))
+	req.Header.Set("Authorization", fmt.Sprintf("Key %s", Config.Key))
 	resp, err := http.DefaultClient.Do(req)
 	return resp, err
 }
@@ -42,11 +36,8 @@ func ApiGet[T any](path string, to T) (T, error) {
 		return res, err
 	}
 
-	log.Println(resp.Status)
-
 	err = json.NewDecoder(resp.Body).Decode(&res)
 	return res, err
-
 }
 
 func ApiPost[T any](path string, data any, to T) (T, error) {

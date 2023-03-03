@@ -9,7 +9,10 @@ import (
 	"os"
 )
 
-var Output = make(chan any)
+type ConfigT struct {
+	Url string
+	Key string
+}
 
 type SearchQuery struct {
 	Page  int    `json:"page"`
@@ -19,6 +22,13 @@ type SearchQuery struct {
 type CountResp struct {
 	Count int `json:"count"`
 }
+
+var Config = ConfigT{
+	Url: "http://localhost:8000",
+	Key: os.Getenv("OVERCAST_API_KEY"),
+}
+
+var Output = make(chan any)
 
 func writer() {
 	w := bufio.NewWriter(os.Stdout)
@@ -32,16 +42,34 @@ func writer() {
 }
 
 func app() {
+	defer close(Output)
+
+	var initKey = func(key string) {
+		log.Println(key, Config.Key)
+		if key == "" && Config.Key == "" {
+			log.Fatalf("No API key provided\nYou can provide one by using the --key flag (priority)\nor OVERCAST_API_KEY environment variable\nGet or update your key here: https://search.overcast-security.app/profile")
+		}
+		if key != "" {
+			Config.Key = key
+		}
+	}
+
+	var keyFlag = func(mut *flag.FlagSet) *string {
+		return mut.String("key", "", "Use API key (uses env if not supplied)")
+	}
+
 	searchCmd := flag.NewFlagSet("search", flag.ExitOnError)
-	searchAll := flag.Bool("all", false, "get all pages")
-	searchPage := flag.Int("page", 1, "get page")
+	searchAll := searchCmd.Bool("all", false, "get all pages")
+	searchPage := searchCmd.Int("page", 1, "get page")
+	searchKey := keyFlag(searchCmd)
 
 	overviewCmd := flag.NewFlagSet("overview", flag.ExitOnError)
-	//overviewOrg := flag.Bool("org", false, "organization overview (replaces domain)")
+	overviewKey := keyFlag(overviewCmd)
 
 	switch os.Args[1] {
 	case "search":
 		searchCmd.Parse(os.Args[2:])
+		initKey(*searchKey)
 		if *searchAll {
 			*searchPage = -1
 		}
@@ -51,13 +79,14 @@ func app() {
 		}
 	case "overview":
 		overviewCmd.Parse(os.Args[2:])
+		initKey(*overviewKey)
 		err := AssetOverview(overviewCmd.Args()[0])
 		if err != nil {
 			log.Println(err)
 		}
+	default:
+		log.Fatalf("subcommands: search, overview")
 	}
-
-	close(Output)
 }
 
 func main() {
