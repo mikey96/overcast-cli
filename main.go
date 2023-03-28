@@ -1,34 +1,20 @@
 package main
 
 import (
-	"bufio"
-	"encoding/json"
 	"flag"
 	"log"
 	"os"
 )
 
 var Config = ConfigT{
-	Url: "http://localhost:8000",
+	Url: "https://api.search.overcast-security.app",
 	// this is overwritten by -key flag
 	Key: os.Getenv("OVERCAST_API_KEY"),
 }
 
-var Output = make(chan any)
-
-func writer() {
-	w := bufio.NewWriter(os.Stdout)
-	defer w.Flush()
-	for res := range Output {
-		err := json.NewEncoder(w).Encode(res)
-		if err != nil {
-			log.Println(err)
-		}
-	}
-}
-
 func app() {
 	defer close(Output)
+	defer close(JsonOutput)
 
 	var initKey = func(key string) {
 		if key == "" && Config.Key == "" {
@@ -54,7 +40,17 @@ func app() {
 	metadataCmd := flag.NewFlagSet("metadata", flag.ExitOnError)
 	metadataKey := keyFlag(metadataCmd)
 
+	subsCmd := flag.NewFlagSet("subs", flag.ExitOnError)
+	subsKey := keyFlag(subsCmd)
+
 	switch os.Args[1] {
+	case "subs":
+		subsCmd.Parse(os.Args[2:])
+		initKey(*subsKey)
+		err := Subdomains(QueryStringArgs(subsCmd.Args()))
+		if err != nil {
+			log.Println(err)
+		}
 	case "search":
 		searchCmd.Parse(os.Args[2:])
 		initKey(*searchKey)
@@ -86,5 +82,6 @@ func app() {
 
 func main() {
 	go app()
-	writer()
+	go writer()
+	jsonWriter()
 }

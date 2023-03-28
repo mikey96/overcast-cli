@@ -5,45 +5,58 @@ import (
 	"sync"
 )
 
-func Search(page int, queryString string) error {
-	var count = func(queryString string) (int, error) {
-		resp, err := ApiPost("/search/count", SearchReq{Query: queryString}, CountResp{})
-		return resp.Count, err
-	}
+func SearchPage(page int, query string) (any, error) {
+	req := SearchReq{Page: page, Query: query}
+	return ApiPost("/search/distinct-subdomains", req, any(1))
+}
 
-	var searchPage = func(p int) error {
-		query := SearchReq{Page: p, Query: queryString}
-		resp, err := ApiPost("/search", query, any(1))
-		if err != nil {
-			return err
-		}
-		Output <- resp
-		return nil
-	}
-
-	c, err := count(queryString)
-	if err != nil {
-		return err
-	}
-
+func SearchAllPages(query string, callback func(any, error)) error {
+	c, err := CountSearch(query)
+	if err != nil {return err}
 	pages := (c / 100) + 1
-	if page >= 0 {
-		if page > pages {
-			return fmt.Errorf("Last page is %d", pages)
-		}
-		return searchPage(page)
-	}
-
 	var wg sync.WaitGroup
 	for i := 1; i <= pages; i++ {
 		wg.Add(1)
 		go func(p int) {
 			defer wg.Done()
-			searchPage(p)
+			callback(SearchPage(p, query))
 		}(i)
 	}
 	wg.Wait()
 	return nil
+}
+
+func CountSearch(queryString string) (int, error) {
+	resp, err := ApiPost("/search/count", SearchReq{Query: queryString}, CountResp{})
+	return resp.Count, err
+}
+
+func Search(page int, queryString string) error {
+	if page >= 0 {
+		resp, err := SearchPage(page, queryString)
+		if err == nil {
+			JsonOutput <- resp
+		}
+		return err
+	} else {
+		return SearchAllPages(queryString, func(resp any, err error) {
+			if err == nil {
+				JsonOutput <- resp
+			}
+		})
+	}
+}
+
+func Subdomains(root string) error {
+	return SearchAllPages(root, func(resp any, err error) {
+		if err == nil {
+			for _, row := range resp.([]any) {
+				res, ok := row.(map[string]any)["subdomain"]; if ok {
+					Output <- res.(string)
+				}
+			}
+		}
+	})
 }
 
 func Metadata(queryString string) error {
@@ -52,7 +65,7 @@ func Metadata(queryString string) error {
 	if err != nil {
 		return err
 	}
-	Output <- resp
+	JsonOutput <- resp
 	return nil
 }
 
@@ -92,6 +105,6 @@ func Overview(domain string) error {
 		return true
 	})
 
-	Output <- resp
+	JsonOutput <- resp
 	return nil
 }
