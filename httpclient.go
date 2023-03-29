@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -36,6 +37,12 @@ func ApiGet[T any](path string, to T) (int, T, error) {
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&res)
+	if err != nil {
+		var message MessageResp
+		err = json.NewDecoder(resp.Body).Decode(&message)
+		Stderr <- message.Message
+		return resp.StatusCode, res, errors.New(message.Message)
+	}
 	return resp.StatusCode, res, err
 }
 
@@ -56,5 +63,11 @@ func ApiPost[T any](path string, data any, to T) (int, T, error) {
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&res)
+	if err != nil || resp.StatusCode != 200 {
+		var message MessageResp
+		err = json.NewDecoder(resp.Body).Decode(&message)
+		Stderr <- message.Message
+		return resp.StatusCode, res, errors.New(message.Message)
+	}
 	return resp.StatusCode, res, err
 }

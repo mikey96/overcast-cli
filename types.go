@@ -20,6 +20,10 @@ type CountResp struct {
 	Count int `json:"count"`
 }
 
+type MessageResp struct {
+	Message string `json:"message"`
+}
+
 func QueryStringArgs(args []string) string {
 	var qstr string
 	for _, arg := range args {

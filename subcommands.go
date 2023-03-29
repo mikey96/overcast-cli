@@ -8,7 +8,7 @@ import (
 func SearchPage(page int, query string) (any, error) {
 	req := SearchReq{Page: page, Query: query}
 	status, resp, err := ApiPost("/search/distinct-subdomains", req, any(1))
-	if status != 200 {
+	if status != 200 && err == nil {
 		return resp, fmt.Errorf("Request error, status: %d", status)
 	}
 	return resp, err
@@ -32,7 +32,8 @@ func SearchAllPages(query string, callback func(any, error)) error {
 
 func CountSearch(queryString string) (int, error) {
 	status, resp, err := ApiPost("/search/distinct-subdomains/count", SearchReq{Query: queryString}, CountResp{})
-	if status != 200 {
+	fmt.Println(err)
+	if status != 200 && err == nil {
 		return resp.Count, fmt.Errorf("Request error, status: %d", status)
 	}
 	return resp.Count, err
@@ -70,13 +71,15 @@ func Subdomains(root string) error {
 	}
 
 	return SearchAllPages(root, func(resp any, err error) {
-		if err == nil {
-			r, ok := resp.([]any); if ok {
-				for _, row := range r {
-					res, ok := row.(map[string]any)["subdomain"]; if ok {
-						if unique(res.(string)) {
-							Stdout <- res.(string)
-						}
+		if err != nil {
+			Stderr <- err.Error()
+			return
+		}
+		r, ok := resp.([]any); if ok {
+			for _, row := range r {
+				res, ok := row.(map[string]any)["subdomain"]; if ok {
+					if unique(res.(string)) {
+						Stdout <- res.(string)
 					}
 				}
 			}
