@@ -13,8 +13,6 @@ var Config = ConfigT{
 }
 
 func app() {
-	defer closeChans()
-
 	var initKey = func(key string) {
 		if key == "" && Config.Key == "" {
 			log.Fatalf("No API key provided\nYou can provide one by using the --key flag (priority)\nor OVERCAST_API_KEY environment variable\nGet or update your key here: https://search.overcast-security.app/profile")
@@ -80,6 +78,9 @@ func app() {
 }
 
 func main() {
-	go app()
-	writer()
+	go func() {
+		defer CloseWriter()
+		app()
+	}()
+	Writer()
 }

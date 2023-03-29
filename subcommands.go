@@ -31,7 +31,7 @@ func SearchAllPages(query string, callback func(any, error)) error {
 }
 
 func CountSearch(queryString string) (int, error) {
-	status, resp, err := ApiPost("/search/count", SearchReq{Query: queryString}, CountResp{})
+	status, resp, err := ApiPost("/search/distinct-subdomains/count", SearchReq{Query: queryString}, CountResp{})
 	if status != 200 {
 		return resp.Count, fmt.Errorf("Request error, status: %d", status)
 	}

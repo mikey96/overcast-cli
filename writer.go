@@ -32,14 +32,14 @@ func writePipeJson(w *bufio.Writer, pipe chan any) {
 	}
 }
 
-func closeChans() {
+func CloseWriter() {
 	close(Stderr)
 	close(StderrJson)
 	close(Stdout)
 	close(StdoutJson)
 }
 
-func writer() {
+func Writer() {
 	stdout := bufio.NewWriter(os.Stdout)
 	stderr := bufio.NewWriter(os.Stderr)
 	var wg sync.WaitGroup
