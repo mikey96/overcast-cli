@@ -9,7 +9,7 @@ func SearchPage(page int, query string) (any, error) {
 	req := SearchReq{Page: page, Query: query}
 	status, resp, err := ApiPost("/search/distinct-subdomains", req, any(1))
 	if status != 200 {
-		return resp, fmt.Errorf("Request error, status: {}", status)
+		return resp, fmt.Errorf("Request error, status: %d", status)
 	}
 	return resp, err
 }
@@ -33,7 +33,7 @@ func SearchAllPages(query string, callback func(any, error)) error {
 func CountSearch(queryString string) (int, error) {
 	status, resp, err := ApiPost("/search/count", SearchReq{Query: queryString}, CountResp{})
 	if status != 200 {
-		return resp.Count, fmt.Errorf("Request error, status: {}", status)
+		return resp.Count, fmt.Errorf("Request error, status: %d", status)
 	}
 	return resp.Count, err
 }
@@ -41,15 +41,19 @@ func CountSearch(queryString string) (int, error) {
 func Search(page int, queryString string) error {
 	if page >= 0 {
 		resp, err := SearchPage(page, queryString)
-		if err == nil {
-			StdoutJson <- resp
+		if err != nil {
+			Stderr <- err.Error()
+			return err
 		}
+		StdoutJson <- resp
 		return err
 	} else {
 		return SearchAllPages(queryString, func(resp any, err error) {
-			if err == nil {
-				StdoutJson <- resp
+			if err != nil {
+				Stderr <- err.Error()
+				return
 			}
+			StdoutJson <- resp
 		})
 	}
 }
@@ -87,7 +91,7 @@ func Metadata(queryString string) error {
 		return err
 	}
 	if status != 200 {
-		Stderr <- fmt.Errorf("Request error, status: {}", status).Error()
+		Stderr <- fmt.Errorf("Request error, status: %d", status).Error()
 	}
 	StdoutJson <- resp
 	return nil
@@ -116,7 +120,7 @@ func Overview(domain string) error {
 			defer wg.Done()
 			status, ov, err := src(domain)
 			if status != 200 && err == nil {
-				Stderr <- fmt.Errorf("Request error, status: {}", status).Error()
+				Stderr <- fmt.Errorf("Request error, status: %d", status).Error()
 				return;
 			}
 			if err != nil {
