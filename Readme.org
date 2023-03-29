@@ -17,6 +17,10 @@ To use the app you must provide an API key, which can be found [[https://search.
 You can either use the `-key` flag or set the environment variable OVERCAST_API_KEY to authenticate yourself.
 #+begin_src shell
 export OVERCAST_API_KEY=****
+
+OR
+
+-key ***
 #+end_src
 * Examples
 ** Search with filter (one page)
