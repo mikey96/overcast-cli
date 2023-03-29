@@ -2,25 +2,34 @@
 
 Overcast Security CLI
 * Installation
+** go install
 #+begin_src shell
 go install github.com/mikey96/overcast-cli@latest
 #+end_src
+** From source
+#+begin_src shell
+git clone github.com/mikey96/overcast-cli
+cd overcast-cli
+go install .
+#+end_src
 * Examples
-#+begin_src shell
-overcast-cli search hackerone.com service.port:443
-#+end_src
-#+begin_src shell
-overcast-cli search -page 3 hackerone.com service.port:443
-#+end_src
-#+begin_src shell
-overcast-cli search -all hackerone.com service.port:443
-#+end_src
-#+begin_src shell
-overcast-cli metadata hackerone.com service.port:443
-#+end_src
-#+begin_src shell
-overcast-cli overview hackerone.com
-#+end_src
-#+begin_src shell
-overcast-cli subs hackerone.com
-#+end_src
+- Search with filter (one page)
+  #+begin_src shell
+  overcast-cli search hackerone.com service.port:443
+  #+end_src
+- Search with filter (all pages)
+  #+begin_src shell
+  overcast-cli search -all hackerone.com service.port:443
+  #+end_src
+- Search metadata
+  #+begin_src shell
+  overcast-cli metadata hackerone.com service.port:443
+  #+end_src
+- Asset overview
+  #+begin_src shell
+  overcast-cli overview hackerone.com
+  #+end_src
+- All subdomains
+  #+begin_src shell
+  overcast-cli subs hackerone.com
+  #+end_src
