@@ -13,8 +13,7 @@ var Config = ConfigT{
 }
 
 func app() {
-	defer close(Output)
-	defer close(JsonOutput)
+	defer closeChans()
 
 	var initKey = func(key string) {
 		if key == "" && Config.Key == "" {
@@ -82,6 +81,5 @@ func app() {
 
 func main() {
 	go app()
-	go writer()
-	jsonWriter()
+	writer()
 }

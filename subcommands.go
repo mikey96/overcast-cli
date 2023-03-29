@@ -7,7 +7,11 @@ import (
 
 func SearchPage(page int, query string) (any, error) {
 	req := SearchReq{Page: page, Query: query}
-	return ApiPost("/search/distinct-subdomains", req, any(1))
+	status, resp, err := ApiPost("/search/distinct-subdomains", req, any(1))
+	if status != 200 {
+		return resp, fmt.Errorf("Request error, status: {}", status)
+	}
+	return resp, err
 }
 
 func SearchAllPages(query string, callback func(any, error)) error {
@@ -27,7 +31,10 @@ func SearchAllPages(query string, callback func(any, error)) error {
 }
 
 func CountSearch(queryString string) (int, error) {
-	resp, err := ApiPost("/search/count", SearchReq{Query: queryString}, CountResp{})
+	status, resp, err := ApiPost("/search/count", SearchReq{Query: queryString}, CountResp{})
+	if status != 200 {
+		return resp.Count, fmt.Errorf("Request error, status: {}", status)
+	}
 	return resp.Count, err
 }
 
@@ -35,24 +42,38 @@ func Search(page int, queryString string) error {
 	if page >= 0 {
 		resp, err := SearchPage(page, queryString)
 		if err == nil {
-			JsonOutput <- resp
+			StdoutJson <- resp
 		}
 		return err
 	} else {
 		return SearchAllPages(queryString, func(resp any, err error) {
 			if err == nil {
-				JsonOutput <- resp
+				StdoutJson <- resp
 			}
 		})
 	}
 }
 
 func Subdomains(root string) error {
+	var seen sync.Map
+	var unique = func(it string) bool {
+		_, present := seen.Load(it)
+		if present {
+			return false
+		}
+		seen.Store(it, true)
+		return true
+	}
+
 	return SearchAllPages(root, func(resp any, err error) {
 		if err == nil {
-			for _, row := range resp.([]any) {
-				res, ok := row.(map[string]any)["subdomain"]; if ok {
-					Output <- res.(string)
+			r, ok := resp.([]any); if ok {
+				for _, row := range r {
+					res, ok := row.(map[string]any)["subdomain"]; if ok {
+						if unique(res.(string)) {
+							Stdout <- res.(string)
+						}
+					}
 				}
 			}
 		}
@@ -61,24 +82,27 @@ func Subdomains(root string) error {
 
 func Metadata(queryString string) error {
 	query := SearchReq{Page: 1, Query: queryString}
-	resp, err := ApiPost("/search/distinct-subdomains/metadata", query, any(1))
+	status, resp, err := ApiPost("/search/distinct-subdomains/metadata", query, any(1))
 	if err != nil {
 		return err
 	}
-	JsonOutput <- resp
+	if status != 200 {
+		Stderr <- fmt.Errorf("Request error, status: {}", status).Error()
+	}
+	StdoutJson <- resp
 	return nil
 }
 
 func Overview(domain string) error {
 	var respT map[string]any
-	var sources = map[string]func(string) (any, error){
-		"asset": func(domain string) (any, error) {
+	var sources = map[string]func(string) (int, any, error){
+		"asset": func(domain string) (int, any, error) {
 			return ApiGet(fmt.Sprintf("/overview/asset?domain=%s", domain), respT)
 		},
-		"service": func(domain string) (any, error) {
+		"service": func(domain string) (int, any, error) {
 			return ApiGet(fmt.Sprintf("/overview/services?domain=%s", domain), respT)
 		},
-		"risk": func(domain string) (any, error) {
+		"risk": func(domain string) (int, any, error) {
 			return ApiGet(fmt.Sprintf("/overview/risks?domain=%s", domain), respT)
 		},
 	}
@@ -88,12 +112,18 @@ func Overview(domain string) error {
 	var tmp = sync.Map{}
 	wg.Add(len(sources))
 	for k, v := range sources {
-		go func(key string, src func(string) (any, error)) {
+		go func(key string, src func(string) (int, any, error)) {
 			defer wg.Done()
-			ov, err := src(domain)
-			if err == nil {
-				tmp.Store(key, ov)
+			status, ov, err := src(domain)
+			if status != 200 && err == nil {
+				Stderr <- fmt.Errorf("Request error, status: {}", status).Error()
+				return;
 			}
+			if err != nil {
+				Stderr <- err.Error()
+				return;
+			}
+			tmp.Store(key, ov)
 		}(k, v)
 	}
 	wg.Wait()
@@ -105,6 +135,6 @@ func Overview(domain string) error {
 		return true
 	})
 
-	JsonOutput <- resp
+	StdoutJson <- resp
 	return nil
 }

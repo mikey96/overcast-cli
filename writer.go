@@ -1,31 +1,64 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"log"
 	"bufio"
 	"encoding/json"
+	"fmt"
+	"log"
+	"os"
+	"sync"
 )
 
-var Output = make(chan string)
-var JsonOutput = make(chan any)
+var Stdout = make(chan string)
+var StdoutJson = make(chan any)
+var Stderr = make(chan string)
+var StderrJson = make(chan any)
 
-func writer() {
-	w := bufio.NewWriter(os.Stdout)
+func writePipe(w *bufio.Writer, pipe chan string) {
 	defer w.Flush()
-	for res := range Output {
+	for res := range pipe {
 		fmt.Fprintln(w, res)
 	}
 }
 
-func jsonWriter() {
-	w := bufio.NewWriter(os.Stdout)
+func writePipeJson(w *bufio.Writer, pipe chan any) {
 	defer w.Flush()
-	for res := range JsonOutput {
-		err := json.NewEncoder(w).Encode(res)
+	enc := json.NewEncoder(w)
+	for res := range pipe {
+		err := enc.Encode(res)
 		if err != nil {
 			log.Println(err)
 		}
 	}
+}
+
+func closeChans() {
+	close(Stderr)
+	close(StderrJson)
+	close(Stdout)
+	close(StdoutJson)
+}
+
+func writer() {
+	stdout := bufio.NewWriter(os.Stdout)
+	stderr := bufio.NewWriter(os.Stderr)
+	var wg sync.WaitGroup
+	wg.Add(4)
+	go func() {
+		defer wg.Done()
+		writePipe(stdout, Stdout)
+	}()
+	go func() {
+		defer wg.Done()
+		writePipe(stderr, Stderr)
+	}()
+	go func() {
+		defer wg.Done()
+		writePipeJson(stdout, StdoutJson)
+	}()
+	go func() {
+		defer wg.Done()
+		writePipeJson(stderr, StderrJson)
+	}()
+	wg.Wait()
 }
