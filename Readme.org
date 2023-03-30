@@ -16,6 +16,11 @@ go install .
 To use the app you must provide an API key, which can be found [[https://search.overcast-security.app/profile][here]].
 You can either use the `-key` flag or set the environment variable OVERCAST_API_KEY to authenticate yourself.
 #+begin_src shell
+# using flag
+overcast-cli [subcommand] -key {api-key} [args...]
+#+end_src
+#+begin_src shell
+# using environment
 export OVERCAST_API_KEY={api-key}
 #+end_src
 
