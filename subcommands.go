@@ -32,7 +32,6 @@ func SearchAllPages(query string, callback func(any, error)) error {
 
 func CountSearch(queryString string) (int, error) {
 	status, resp, err := ApiPost("/search/distinct-subdomains/count", SearchReq{Query: queryString}, CountResp{})
-	fmt.Println(err)
 	if status != 200 && err == nil {
 		return resp.Count, fmt.Errorf("Request error, status: %d", status)
 	}
@@ -60,16 +59,6 @@ func Search(page int, queryString string) error {
 }
 
 func Subdomains(root string) error {
-	var seen sync.Map
-	var unique = func(it string) bool {
-		_, present := seen.Load(it)
-		if present {
-			return false
-		}
-		seen.Store(it, true)
-		return true
-	}
-
 	return SearchAllPages(root, func(resp any, err error) {
 		if err != nil {
 			Stderr <- err.Error()
@@ -78,9 +67,7 @@ func Subdomains(root string) error {
 		r, ok := resp.([]any); if ok {
 			for _, row := range r {
 				res, ok := row.(map[string]any)["subdomain"]; if ok {
-					if unique(res.(string)) {
-						Stdout <- res.(string)
-					}
+					Stdout <- res.(string)
 				}
 			}
 		}

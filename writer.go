@@ -14,10 +14,22 @@ var StdoutJson = make(chan any)
 var Stderr = make(chan string)
 var StderrJson = make(chan any)
 
-func writePipe(w *bufio.Writer, pipe chan string) {
+func writePipeUnique(w *bufio.Writer, pipe chan string) {
+	var seen sync.Map
+	var unique = func(it string) bool {
+		_, present := seen.Load(it)
+		if present {
+			return false
+		}
+		seen.Store(it, true)
+		return true
+	}
+
 	defer w.Flush()
 	for res := range pipe {
-		fmt.Fprintln(w, res)
+		if unique(res) {
+			fmt.Fprintln(w, res)
+		}
 	}
 }
 
@@ -46,11 +58,11 @@ func Writer() {
 	wg.Add(4)
 	go func() {
 		defer wg.Done()
-		writePipe(stdout, Stdout)
+		writePipeUnique(stdout, Stdout)
 	}()
 	go func() {
 		defer wg.Done()
-		writePipe(stderr, Stderr)
+		writePipeUnique(stderr, Stderr)
 	}()
 	go func() {
 		defer wg.Done()

@@ -36,11 +36,16 @@ func ApiGet[T any](path string, to T) (int, T, error) {
 		return resp.StatusCode, res, err
 	}
 
-	err = json.NewDecoder(resp.Body).Decode(&res)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return resp.StatusCode, res, err
+	}
+
+	err = json.NewDecoder(bytes.NewReader(body)).Decode(&res)
 	if err != nil {
 		var message MessageResp
-		err = json.NewDecoder(resp.Body).Decode(&message)
-		Stderr <- message.Message
+		err = json.NewDecoder(bytes.NewReader(body)).Decode(&message)
+		// Stderr <- message.Message
 		return resp.StatusCode, res, errors.New(message.Message)
 	}
 	return resp.StatusCode, res, err
@@ -62,11 +67,16 @@ func ApiPost[T any](path string, data any, to T) (int, T, error) {
 		return resp.StatusCode, res, err
 	}
 
-	err = json.NewDecoder(resp.Body).Decode(&res)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return resp.StatusCode, res, err
+	}
+
+	err = json.NewDecoder(bytes.NewReader(body)).Decode(&res)
 	if err != nil || resp.StatusCode != 200 {
 		var message MessageResp
-		err = json.NewDecoder(resp.Body).Decode(&message)
-		Stderr <- message.Message
+		err = json.NewDecoder(bytes.NewReader(body)).Decode(&message)
+		// Stderr <- message.Message
 		return resp.StatusCode, res, errors.New(message.Message)
 	}
 	return resp.StatusCode, res, err
