@@ -97,7 +97,11 @@ func help() string {
     Get data about the assets matching a search query
 
   - help
-    View this page`)
+    View this page
+
+Links:
+  - Get api key  https://search.overcast-security.app/profile
+  - Github repo  https://github.com/mikey96/overcast-cli/`)
 }
 
 func main() {
