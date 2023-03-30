@@ -37,7 +37,7 @@ overcast-cli subs -key {api-key} hackerone.com
 #+end_src
 ** Search with filter (all pages)
 #+begin_src shell
-overcast-cli search -all hackerone.com service.port:443
+overcast-cli search -all -key {api-key} hackerone.com service.port:443
 #+end_src
 ** Search with filter and key flag (one page)
 #+begin_src shell
