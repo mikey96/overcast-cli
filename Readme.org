@@ -18,8 +18,6 @@ You can either use the `-key` flag or set the environment variable OVERCAST_API_
 #+begin_src shell
 # using flag
 overcast-cli [subcommand] -key {api-key} [args...]
-=======
-export OVERCAST_API_KEY=****
 #+end_src
 #+begin_src shell
 # using environment
