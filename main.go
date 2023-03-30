@@ -41,51 +41,36 @@ func app() {
 	subsCmd := flag.NewFlagSet("subs", flag.ExitOnError)
 	subsKey := keyFlag(subsCmd)
 
+	if len(os.Args) <= 1 {
+		fmt.Print(help())
+		return
+	}
+
 	switch os.Args[1] {
 	case "help":
 		fmt.Print(help())
 	case "subs":
 		subsCmd.Parse(os.Args[2:])
 		initKey(*subsKey)
-		err := Subdomains(QueryStringArgs(subsCmd.Args()))
-		if err != nil {
-			log.Println(err)
-		}
+		Subdomains(QueryStringArgs(subsCmd.Args()))
 	case "search":
 		searchCmd.Parse(os.Args[2:])
 		initKey(*searchKey)
 		if *searchAll {
 			*searchPage = -1
 		}
-		err := Search(*searchPage, QueryStringArgs(searchCmd.Args()))
-		if err != nil {
-			log.Println(err)
-		}
+		Search(*searchPage, QueryStringArgs(searchCmd.Args()))
 	case "metadata":
 		metadataCmd.Parse(os.Args[2:])
 		initKey(*metadataKey)
-		err := Metadata(QueryStringArgs(metadataCmd.Args()))
-		if err != nil {
-			log.Println(err)
-		}
+		Metadata(QueryStringArgs(metadataCmd.Args()))
 	case "overview":
 		overviewCmd.Parse(os.Args[2:])
 		initKey(*overviewKey)
-		err := Overview(overviewCmd.Args()[0])
-		if err != nil {
-			log.Println(err)
-		}
+		Overview(overviewCmd.Args()[0])
 	default:
-		log.Println("subcommands: search, overview")
+		fmt.Print(help())
 	}
-}
-
-func main() {
-	go func() {
-		defer CloseWriter()
-		app()
-	}()
-	Writer()
 }
 
 func help() string {
@@ -113,4 +98,12 @@ func help() string {
 
   - help
     View this page`)
+}
+
+func main() {
+	go func() {
+		defer CloseWriter()
+		app()
+	}()
+	Writer()
 }

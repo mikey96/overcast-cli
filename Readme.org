@@ -16,16 +16,27 @@ go install .
 To use the app you must provide an API key, which can be found [[https://search.overcast-security.app/profile][here]].
 You can either use the `-key` flag or set the environment variable OVERCAST_API_KEY to authenticate yourself.
 #+begin_src shell
-export OVERCAST_API_KEY=****
+export OVERCAST_API_KEY={api-key}
 #+end_src
+
+#+RESULTS:
+
 * Examples
-** Search with filter (one page)
+** All subdomains
 #+begin_src shell
-overcast-cli search hackerone.com service.port:443
+overcast-cli subs hackerone.com
+#+end_src
+** All subdomains with key flag
+#+begin_src shell
+overcast-cli subs -key {api-key} hackerone.com
 #+end_src
 ** Search with filter (all pages)
 #+begin_src shell
 overcast-cli search -all hackerone.com service.port:443
+#+end_src
+** Search with filter and key flag (one page)
+#+begin_src shell
+overcast-cli search -key {api-key} hackerone.com service.port:443
 #+end_src
 ** Search metadata
 #+begin_src shell
@@ -34,8 +45,4 @@ overcast-cli metadata hackerone.com service.port:443
 ** Asset overview
 #+begin_src shell
 overcast-cli overview hackerone.com
-#+end_src
-** All subdomains
-#+begin_src shell
-overcast-cli subs hackerone.com
 #+end_src
