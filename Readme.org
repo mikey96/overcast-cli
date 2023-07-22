@@ -13,7 +13,7 @@ cd overcast-cli
 go install .
 #+end_src
 ** Configuration
-To use the app you must provide an API key, which can be found [[https://search.overcast-security.app/profile][here]].
+To use the app you must provide an API key, which can be found [[https://enterprise.overcast-security.app/account][here]].
 You can either use the `-key` flag or set the environment variable OVERCAST_API_KEY to authenticate yourself.
 #+begin_src shell
 # using flag
@@ -29,25 +29,34 @@ export OVERCAST_API_KEY={api-key}
 * Examples
 ** All subdomains
 #+begin_src shell
-overcast-cli subs hackerone.com
+overcast-cli subdomains service.port:22
 #+end_src
 ** All subdomains with key flag
 #+begin_src shell
-overcast-cli subs -key {api-key} hackerone.com
+overcast-cli subdomains -key {api-key} service.port:22
 #+end_src
 ** Search with filter (all pages)
 #+begin_src shell
-overcast-cli search -all -key {api-key} hackerone.com service.port:443
-#+end_src
-** Search with filter and key flag (one page)
-#+begin_src shell
-overcast-cli search -key {api-key} hackerone.com service.port:443
+overcast-cli subdomains-search -key {api-key} service.port:443
 #+end_src
 ** Search metadata
 #+begin_src shell
-overcast-cli metadata hackerone.com service.port:443
+overcast-cli subdomains-metadata service.port:443
 #+end_src
-** Asset overview
+
+** All CIDR IPs
 #+begin_src shell
-overcast-cli overview hackerone.com
+overcast-cli ips service.port:22
+#+end_src
+** All CIDR IPs with key flag
+#+begin_src shell
+overcast-cli ips -key {api-key} service.port:22
+#+end_src
+** Search with filter (all pages)
+#+begin_src shell
+overcast-cli ips-search -key {api-key} service.port:443
+#+end_src
+** Search metadata
+#+begin_src shell
+overcast-cli ips-metadata service.port:443
 #+end_src

@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-func SearchPage(page int, query string) (any, error) {
+func SearchPageSubs(page int, query string) (any, error) {
 	req := SearchReq{Page: page, Query: query}
 	status, resp, err := ApiPost("/search/distinct-subdomains", req, any(1))
 	if status != 200 && err == nil {
@@ -14,23 +14,25 @@ func SearchPage(page int, query string) (any, error) {
 	return resp, err
 }
 
-func SearchAllPages(query string, callback func(any, error)) error {
-	c, err := CountSearch(query)
-	if err != nil {return err}
+func SearchAllPagesSubs(query string, callback func(any, error)) error {
+	c, err := CountSearchSubs(query)
+	if err != nil {
+		return err
+	}
 	pages := (c / 100) + 1
 	var wg sync.WaitGroup
 	for i := 1; i <= pages; i++ {
 		wg.Add(1)
 		go func(p int) {
 			defer wg.Done()
-			callback(SearchPage(p, query))
+			callback(SearchPageSubs(p, query))
 		}(i)
 	}
 	wg.Wait()
 	return nil
 }
 
-func CountSearch(queryString string) (int, error) {
+func CountSearchSubs(queryString string) (int, error) {
 	status, resp, err := ApiPost("/search/distinct-subdomains/count", SearchReq{Query: queryString}, CountResp{})
 	if status != 200 && err == nil {
 		return resp.Count, fmt.Errorf("Request error, status: %d", status)
@@ -38,9 +40,44 @@ func CountSearch(queryString string) (int, error) {
 	return resp.Count, err
 }
 
-func Search(page int, queryString string) error {
+func SearchPageIPs(page int, query string) (any, error) {
+	req := SearchReq{Page: page, Query: query}
+	status, resp, err := ApiPost("/search/distinct-ips", req, any(1))
+	if status != 200 && err == nil {
+		return resp, fmt.Errorf("Request error, status: %d", status)
+	}
+	return resp, err
+}
+
+func SearchAllPagesIPs(query string, callback func(any, error)) error {
+	c, err := CountSearchIPs(query)
+	if err != nil {
+		return err
+	}
+	pages := (c / 100) + 1
+	var wg sync.WaitGroup
+	for i := 1; i <= pages; i++ {
+		wg.Add(1)
+		go func(p int) {
+			defer wg.Done()
+			callback(SearchPageIPs(p, query))
+		}(i)
+	}
+	wg.Wait()
+	return nil
+}
+
+func CountSearchIPs(queryString string) (int, error) {
+	status, resp, err := ApiPost("/search/distinct-ips/count", SearchReq{Query: queryString}, CountResp{})
+	if status != 200 && err == nil {
+		return resp.Count, fmt.Errorf("Request error, status: %d", status)
+	}
+	return resp.Count, err
+}
+
+func SearchSubs(page int, queryString string) error {
 	if page >= 0 {
-		resp, err := SearchPage(page, queryString)
+		resp, err := SearchPageSubs(page, queryString)
 		if err != nil {
 			Stderr <- err.Error()
 			return err
@@ -48,7 +85,7 @@ func Search(page int, queryString string) error {
 		StdoutJson <- resp
 		return err
 	} else {
-		return SearchAllPages(queryString, func(resp any, err error) {
+		return SearchAllPagesSubs(queryString, func(resp any, err error) {
 			if err != nil {
 				Stderr <- err.Error()
 				return
@@ -58,25 +95,79 @@ func Search(page int, queryString string) error {
 	}
 }
 
-func Subdomains(root string) error {
-	return SearchAllPages(root, func(resp any, err error) {
+func SearchIPs(page int, queryString string) error {
+	if page >= 0 {
+		resp, err := SearchPageIPs(page, queryString)
+		if err != nil {
+			Stderr <- err.Error()
+			return err
+		}
+		StdoutJson <- resp
+		return err
+	} else {
+		return SearchAllPagesIPs(queryString, func(resp any, err error) {
+			if err != nil {
+				Stderr <- err.Error()
+				return
+			}
+			StdoutJson <- resp
+		})
+	}
+}
+
+func Subdomains(queryString string) error {
+	return SearchAllPagesSubs(queryString, func(resp any, err error) {
 		if err != nil {
 			Stderr <- err.Error()
 			return
 		}
-		r, ok := resp.([]any); if ok {
+		r, ok := resp.([]any)
+		if ok {
 			for _, row := range r {
-				res, ok := row.(map[string]any)["subdomain"]; if ok {
-					Stdout <- res.(string)
+				res, ok := row.(map[string]any)["subdomain"]
+				if ok {
+					fmt.Println(res)
 				}
 			}
 		}
 	})
 }
 
-func Metadata(queryString string) error {
+func IPs(queryString string) error {
+	return SearchAllPagesIPs(queryString, func(resp any, err error) {
+		if err != nil {
+			Stderr <- err.Error()
+			return
+		}
+		r, ok := resp.([]any)
+		if ok {
+			for _, row := range r {
+				res, ok := row.(map[string]any)["subdomain"]
+				if ok {
+					fmt.Println(res)
+				}
+			}
+		}
+	})
+}
+
+func MetadataSubs(queryString string) error {
 	query := SearchReq{Page: 1, Query: queryString}
 	status, resp, err := ApiPost("/search/distinct-subdomains/metadata", query, any(1))
+	fmt.Println(resp)
+	if err != nil {
+		return err
+	}
+	if status != 200 {
+		Stderr <- fmt.Errorf("Request error, status: %d", status).Error()
+	}
+	StdoutJson <- resp
+	return nil
+}
+
+func MetadataIPs(queryString string) error {
+	query := SearchReq{Page: 1, Query: queryString}
+	status, resp, err := ApiPost("/search/distinct-ips/metadata", query, any(1))
 	if err != nil {
 		return err
 	}
@@ -111,11 +202,11 @@ func Overview(domain string) error {
 			status, ov, err := src(domain)
 			if status != 200 && err == nil {
 				Stderr <- fmt.Errorf("Request error, status: %d", status).Error()
-				return;
+				return
 			}
 			if err != nil {
 				Stderr <- err.Error()
-				return;
+				return
 			}
 			tmp.Store(key, ov)
 		}(k, v)
